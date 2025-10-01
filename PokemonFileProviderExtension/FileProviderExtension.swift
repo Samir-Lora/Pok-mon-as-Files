@@ -10,24 +10,23 @@ import UniformTypeIdentifiers
 import os.log
 
 class FileProviderExtension: NSObject, NSFileProviderReplicatedExtension {
-    private let logger = Logger(subsystem: "lb.pokemon-as-files.extension", category: "FileProvider")
+    private let logger = Logger(subsystem: "lb.pokemon.extension", category: "FileProvider")
     let domain: NSFileProviderDomain
 
     required init(domain: NSFileProviderDomain) {
         self.domain = domain
         super.init()
-        logger.log("FileProviderExtension initialized for domain: \(domain.displayName)")
     }
 
-    func invalidate() {
-        logger.log("FileProviderExtension invalidated")
+    func invalidate() {}
+
+    func importDocument(at fileURL: URL, toParentItemIdentifier parentItemIdentifier: NSFileProviderItemIdentifier, completionHandler: @escaping (NSFileProviderItem?, Error?) -> Void) {
+        completionHandler(nil, NSFileProviderError(.noSuchItem))
     }
 
     // MARK: - Item Management
 
     func item(for identifier: NSFileProviderItemIdentifier, request: NSFileProviderRequest, completionHandler: @escaping (NSFileProviderItem?, Error?) -> Void) -> Progress {
-        logger.log("Requesting item for identifier: \(identifier.rawValue)")
-
         let progress = Progress(totalUnitCount: 1)
 
         Task {
@@ -53,14 +52,11 @@ class FileProviderExtension: NSObject, NSFileProviderReplicatedExtension {
             return PokemonFolderItem()
         }
 
-        // Check if it's a Pokemon file
+        // Check if it's a Pokemon file - fetch from API
         if identifier.rawValue.hasPrefix("pokemon_") {
-            let pokemon = await MainActor.run {
-                PokeAPIService.shared.cachedPokemon
-            }
-
-            if let pokemonItem = pokemon.first(where: { "pokemon_\($0.id)" == identifier.rawValue }) {
-                return PokemonFileItem(pokemon: PokemonItem(pokemon: pokemonItem))
+            let pokemon = try await PokeAPIService.shared.fetchPokemonList(limit: 151)
+            if let found = pokemon.first(where: { "pokemon_\($0.id)" == identifier.rawValue }) {
+                return PokemonFileItem(pokemon: PokemonItem(pokemon: found))
             }
         }
 
@@ -70,14 +66,14 @@ class FileProviderExtension: NSObject, NSFileProviderReplicatedExtension {
     // MARK: - Enumeration
 
     func enumerator(for containerItemIdentifier: NSFileProviderItemIdentifier, request: NSFileProviderRequest) throws -> NSFileProviderEnumerator {
-        logger.log("Creating enumerator for container: \(containerItemIdentifier.rawValue)")
-
         if containerItemIdentifier == .rootContainer {
             return PokemonRootEnumerator(logger: logger)
         } else if containerItemIdentifier.rawValue == "pokemon_folder" {
             return PokemonFolderEnumerator(logger: logger)
         } else if containerItemIdentifier == .workingSet {
             return PokemonWorkingSetEnumerator(logger: logger)
+        } else if containerItemIdentifier == .trashContainer {
+            return PokemonRootEnumerator(logger: logger)
         }
 
         throw NSFileProviderError(.noSuchItem)
@@ -86,7 +82,7 @@ class FileProviderExtension: NSObject, NSFileProviderReplicatedExtension {
     // MARK: - Content Fetching
 
     func fetchContents(for itemIdentifier: NSFileProviderItemIdentifier, version requestedVersion: NSFileProviderItemVersion?, request: NSFileProviderRequest, completionHandler: @escaping (URL?, NSFileProviderItem?, Error?) -> Void) -> Progress {
-        logger.log("Fetching contents for item: \(itemIdentifier.rawValue)")
+        logger.log("📥 FETCH CONTENTS - Fetching contents for item: \(itemIdentifier.rawValue, privacy: .public)")
 
         let progress = Progress(totalUnitCount: 1)
 
@@ -96,15 +92,17 @@ class FileProviderExtension: NSObject, NSFileProviderReplicatedExtension {
 
                 // Create temporary file with content
                 if let pokemonFileItem = item as? PokemonFileItem {
+                    logger.log("📄 Creating temp file for Pokemon: \(pokemonFileItem.filename, privacy: .public)")
                     let tempURL = try await createTempFile(for: pokemonFileItem)
                     completionHandler(tempURL, item, nil)
                 } else {
+                    logger.log("⚠️ Item is not a file, cannot fetch contents")
                     completionHandler(nil, item, NSFileProviderError(.noSuchItem))
                 }
 
                 progress.completedUnitCount = 1
             } catch {
-                logger.error("Failed to fetch contents for \(itemIdentifier.rawValue): \(error.localizedDescription)")
+                logger.error("❌ Failed to fetch contents for \(itemIdentifier.rawValue, privacy: .public): \(error.localizedDescription)")
                 completionHandler(nil, nil, error)
             }
         }
@@ -157,17 +155,50 @@ class FileProviderExtension: NSObject, NSFileProviderReplicatedExtension {
 class PokemonRootItem: NSObject, NSFileProviderItem {
     var itemIdentifier: NSFileProviderItemIdentifier = .rootContainer
     var parentItemIdentifier: NSFileProviderItemIdentifier = .rootContainer
-    var filename: String = "Pokémon Drive"
+    var filename: String = "Pokemon Drive"
     var contentType: UTType = .folder
-    var childItemCount: NSNumber? = 1
+    var childItemCount: NSNumber? = 1  // Only the "Pokemon" folder
+
+    var capabilities: NSFileProviderItemCapabilities {
+        return [.allowsReading, .allowsContentEnumerating]
+    }
+
+    var itemVersion: NSFileProviderItemVersion {
+        return NSFileProviderItemVersion(contentVersion: Data("1".utf8), metadataVersion: Data("1".utf8))
+    }
+
+    var creationDate: Date? {
+        return Date()
+    }
+
+    var contentModificationDate: Date? {
+        return Date()
+    }
 }
 
 class PokemonFolderItem: NSObject, NSFileProviderItem {
     var itemIdentifier: NSFileProviderItemIdentifier = NSFileProviderItemIdentifier("pokemon_folder")
     var parentItemIdentifier: NSFileProviderItemIdentifier = .rootContainer
-    var filename: String = "Pokémon"
+    var filename: String = "Pokemon"
     var contentType: UTType = .folder
-    var childItemCount: NSNumber? = 151
+    var childItemCount: NSNumber? = 151  // We have 5 static Pokemon
+
+    // Add required properties
+    var capabilities: NSFileProviderItemCapabilities {
+        return [.allowsReading, .allowsContentEnumerating]
+    }
+
+    var itemVersion: NSFileProviderItemVersion {
+        return NSFileProviderItemVersion(contentVersion: Data("1".utf8), metadataVersion: Data("1".utf8))
+    }
+
+    var creationDate: Date? {
+        return Date()
+    }
+
+    var contentModificationDate: Date? {
+        return Date()
+    }
 }
 
 class PokemonFileItem: NSObject, NSFileProviderItem {
@@ -198,18 +229,35 @@ class PokemonFileItem: NSObject, NSFileProviderItem {
         return NSNumber(value: fileContent.utf8.count)
     }
 
+    // Add required properties
+    var capabilities: NSFileProviderItemCapabilities {
+        return [.allowsReading]
+    }
+
+    var itemVersion: NSFileProviderItemVersion {
+        return NSFileProviderItemVersion(contentVersion: Data(pokemonItem.identifier.utf8), metadataVersion: Data("1".utf8))
+    }
+
+    var creationDate: Date? {
+        return Date()
+    }
+
+    var contentModificationDate: Date? {
+        return Date()
+    }
+
     var fileContent: String {
         return """
-        Pokémon Information
+        Pokemon Information
         ==================
 
         Name: \(pokemonItem.displayName)
         ID: \(pokemonItem.pokemon.id)
         API URL: \(pokemonItem.pokemon.url)
 
-        This file represents a Pokémon from the PokéAPI database.
-        The Pokémon as Files app creates virtual files for each of the
-        first 151 Pokémon, allowing you to browse them in Finder.
+        This file represents a Pokemon from the PokéAPI database.
+        The Pokemon app creates virtual files for each of the
+        first 151 Pokemon, allowing you to browse them in Finder.
 
         Last updated: \(Date().formatted())
         """

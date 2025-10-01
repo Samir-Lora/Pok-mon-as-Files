@@ -6,7 +6,7 @@
     <true/>
     <key>com.apple.security.application-groups</key>
     <array>
-        <string>group.lb.pokemon-as-files</string>
+        <string>group.lb.pokemon</string>
     </array>
     <key>com.apple.security.network.client</key>
     <true/>

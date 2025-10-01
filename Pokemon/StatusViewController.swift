@@ -1,6 +1,6 @@
 //
 //  StatusViewController.swift
-//  Pokémon as Files
+//  Pokemon
 //
 //  Created by Samir Lora on 30/09/25.
 //
@@ -49,7 +49,7 @@ class StatusViewController: NSViewController {
         statusLabel.backgroundColor = .clear
 
         // Pokemon count label
-        pokemonCountLabel = NSTextField(labelWithString: "0 Pokémon loaded")
+        pokemonCountLabel = NSTextField(labelWithString: "0 Pokemon loaded")
         pokemonCountLabel.font = NSFont.systemFont(ofSize: 12)
         pokemonCountLabel.textColor = .secondaryLabelColor
         pokemonCountLabel.isEditable = false
@@ -106,7 +106,7 @@ class StatusViewController: NSViewController {
         PokeAPIService.shared.$pokemonList
             .receive(on: DispatchQueue.main)
             .sink { [weak self] pokemon in
-                self?.pokemonCountLabel.stringValue = "\(pokemon.count) Pokémon loaded"
+                self?.pokemonCountLabel.stringValue = "\(pokemon.count) Pokemon loaded"
                 self?.updateLastUpdateTime()
             }
             .store(in: &cancellables)
@@ -114,14 +114,12 @@ class StatusViewController: NSViewController {
 
     private func updateUI() {
         Task {
-            let isConnected = await FileProviderDomainManager.shared.isConnected
-            let pokemonCount = await PokeAPIService.shared.pokemonList.count
-
-            await MainActor.run {
-                updateConnectionStatus(isConnected)
-                pokemonCountLabel.stringValue = "\(pokemonCount) Pokémon loaded"
-                updateLastUpdateTime()
-            }
+            let isConnected = FileProviderDomainManager.shared.isConnected
+            let pokemonCount = PokeAPIService.shared.pokemonList.count
+            
+            updateConnectionStatus(isConnected)
+            pokemonCountLabel.stringValue = "\(pokemonCount) Pokemon loaded"
+            updateLastUpdateTime()
         }
     }
 
@@ -132,11 +130,12 @@ class StatusViewController: NSViewController {
     }
 
     private func updateLastUpdateTime() {
-        if let lastUpdate = PokeAPIService.shared.lastUpdateDate {
+        // Since we no longer cache, show current time when Pokemon list is loaded
+        if !PokeAPIService.shared.pokemonList.isEmpty {
             let formatter = DateFormatter()
             formatter.dateStyle = .short
             formatter.timeStyle = .short
-            lastUpdateLabel.stringValue = "Updated: \(formatter.string(from: lastUpdate))"
+            lastUpdateLabel.stringValue = "Updated: \(formatter.string(from: Date()))"
         } else {
             lastUpdateLabel.stringValue = "Never updated"
         }
@@ -144,7 +143,7 @@ class StatusViewController: NSViewController {
 
     @objc private func connectAction() {
         Task {
-            if await FileProviderDomainManager.shared.isConnected {
+            if FileProviderDomainManager.shared.isConnected {
                 try? await FileProviderDomainManager.shared.disconnectDomain()
             } else {
                 try? await FileProviderDomainManager.shared.connectDomain()

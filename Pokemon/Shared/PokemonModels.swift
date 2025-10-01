@@ -1,6 +1,6 @@
 //
 //  PokemonModels.swift
-//  Pokémon as Files
+//  Pokemon
 //
 //  Created by Samir Lora on 30/09/25.
 //
@@ -47,7 +47,7 @@ struct PokemonItem {
 
 // MARK: - App Groups Keys
 enum AppGroupKeys {
-    static let groupIdentifier = "group.lb.pokemon-as-files"
+    static let groupIdentifier = "group.lb.pokemon"
     static let pokemonDataKey = "cached_pokemon_data"
     static let lastUpdateKey = "last_pokemon_update"
 }

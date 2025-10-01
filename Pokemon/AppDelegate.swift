@@ -1,6 +1,6 @@
 //
 //  AppDelegate.swift
-//  Pokémon as Files
+//  Pokemon
 //
 //  Created by Samir Lora on 30/09/25.
 //
@@ -13,7 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
-    private let logger = Logger(subsystem: "lb.pokemon-as-files", category: "AppDelegate")
+    private let logger = Logger(subsystem: "lb.pokemon", category: "AppDelegate")
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         logger.log("Application launched")
@@ -89,8 +89,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             do {
                 try await FileProviderDomainManager.shared.connectDomain()
+                FileProviderDomainManager.shared.updateConnectionStatus(true)
                 updateStatusIcon(connected: true)
                 logger.log("Domain connected successfully")
+
+                // Give the system a moment to register the domain, then signal refresh
+                try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                try? await FileProviderDomainManager.shared.refreshDomain()
             } catch {
                 logger.error("Failed to connect domain: \(error.localizedDescription)")
                 showAlert(title: "Connection Failed", message: error.localizedDescription)

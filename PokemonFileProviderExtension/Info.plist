@@ -5,7 +5,7 @@
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionFileProviderDocumentGroup</key>
-		<string>group.lb.pokemon-as-files</string>
+		<string>group.lb.pokemon</string>
 		<key>NSExtensionFileProviderSupportsEnumeration</key>
 		<true/>
 		<key>NSExtensionPointIdentifier</key>
@@ -14,7 +14,7 @@
 		<string>$(PRODUCT_MODULE_NAME).FileProviderExtension</string>
 	</dict>
     <key>CFBundleDisplayName</key>
-    <string>Pokémon File Provider</string>
+    <string>Pokemon File Provider</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -32,8 +32,6 @@
     <key>NSFileProviderDomainIdentifier</key>
     <string>pokemon</string>
     <key>NSFileProviderDisplayName</key>
-    <string>Pokémon Drive</string>
-    <key>NSFileProviderReplicatedExtension</key>
-    <true/>
+    <string>Pokemon Drive</string>
 </dict>
 </plist>

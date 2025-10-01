@@ -1,43 +1,43 @@
-# Pokémon as Files - macOS File Provider Extension
+# Pokemon - macOS File Provider Extension
 
-A macOS application that displays Pokémon from the PokeAPI as files in Finder using a File Provider Extension.
+A macOS application that displays Pokemon from the PokeAPI as files in Finder using a File Provider Extension.
 
 ## Overview
 
-This application creates a virtual file system that shows the first 151 Pokémon from the PokeAPI as `.txt` files in Finder. The app runs in the background as a menu bar utility with options to connect/disconnect the file provider domain and refresh the Pokémon data.
+This application creates a virtual file system that shows the first 151 Pokemon from the PokeAPI as `.txt` files in Finder. The app runs in the background as a menu bar utility with options to connect/disconnect the file provider domain and refresh the Pokemon data.
 
 ## Features
 
 - **Menu Bar App**: No main window, operates entirely from the system menu bar
-- **File Provider Extension**: Creates a virtual "Pokémon Drive" visible in Finder
-- **PokeAPI Integration**: Fetches the first 151 Pokémon from https://pokeapi.co/api/v2/pokemon?limit=151
-- **Caching**: Stores Pokémon data using App Groups for offline access
+- **File Provider Extension**: Creates a virtual "Pokemon Drive" visible in Finder
+- **PokeAPI Integration**: Fetches the first 151 Pokemon from https://pokeapi.co/api/v2/pokemon?limit=151
+- **Caching**: Stores Pokemon data using App Groups for offline access
 - **Real-time Status**: Visual status indicator and detailed popover view
 
 ## Architecture
 
 ### Components
 
-1. **Main App (`Pokémon as Files.app`)**
+1. **Main App (`Pokemon.app`)**
    - Menu bar interface with status indicator
    - Domain management (connect/disconnect/refresh)
    - Status popover with connection details
 
 2. **File Provider Extension (`PokemonFileProviderExtension`)**
    - NSFileProviderReplicatedExtension implementation
-   - Virtual folder structure: Root > Pokémon > [pokemon files]
-   - Enumeration of Pokémon as text files
+   - Virtual folder structure: Root > Pokemon > [pokemon files]
+   - Enumeration of Pokemon as text files
 
 3. **Shared Components**
    - `PokemonModels.swift`: Data models for API responses and file items
-   - `PokeAPIService.swift`: Network service for fetching Pokémon data
+   - `PokeAPIService.swift`: Network service for fetching Pokemon data
    - `FileProviderDomainManager.swift`: Domain lifecycle management
 
 ## Project Structure
 
 ```
-Pokémon as Files/
-├── Pokémon as Files/                    # Main app target
+Pokemon/
+├── Pokemon/                    # Main app target
 │   ├── AppDelegate.swift                # Menu bar app setup
 │   ├── StatusViewController.swift       # Popover status view
 │   ├── Shared/                         # Shared code between app and extension
@@ -45,7 +45,7 @@ Pokémon as Files/
 │   │   ├── PokeAPIService.swift        # API service
 │   │   └── FileProviderDomainManager.swift # Domain management
 │   ├── Info.plist                     # App configuration
-│   └── PokemonAsFiles.entitlements     # App sandbox permissions
+│   └── Pokemon.entitlements     # App sandbox permissions
 ├── PokemonFileProviderExtension/        # File Provider Extension target
 │   ├── FileProviderExtension.swift     # Main extension class
 │   ├── PokemonEnumerators.swift        # File system enumerators
@@ -78,7 +78,7 @@ Pokémon as Files/
 1. In Xcode, go to **File** > **New** > **Target**
 2. Choose **macOS** > **File Provider Extension**
 3. Product Name: `PokemonFileProviderExtension`
-4. Embed in Application: `Pokémon as Files`
+4. Embed in Application: `Pokemon`
 5. **IMPORTANT**: Delete the auto-generated extension files
 6. Add our custom extension files to the target:
    - `PokemonFileProviderExtension/FileProviderExtension.swift`
@@ -88,13 +88,13 @@ Pokémon as Files/
 
 #### B. Add Files to Main Target
 
-1. Right-click on the main `Pokémon as Files` group in Xcode
-2. Choose **Add Files to "Pokémon as Files"**
+1. Right-click on the main `Pokemon` group in Xcode
+2. Choose **Add Files to "Pokemon"**
 3. Add these files to the main app target:
    - `AppDelegate.swift`
    - `StatusViewController.swift`
    - `Info.plist` (main app)
-   - `PokemonAsFiles.entitlements`
+   - `Pokemon.entitlements`
 
 #### C. Add Shared Files to Both Targets
 
@@ -108,7 +108,7 @@ Pokémon as Files/
 
 1. Select the project in Xcode
 2. Update **Development Team** for both targets:
-   - `Pokémon as Files` (main app)
+   - `Pokemon` (main app)
    - `PokemonFileProviderExtension`
 
 ### 4. Configure App Groups
@@ -116,21 +116,21 @@ Pokémon as Files/
 The project uses App Groups to share data between the main app and extension:
 
 1. In Apple Developer Portal, create an App Group:
-   - Identifier: `group.lb.pokemon-as-files`
-   - Description: "Pokémon as Files Data Sharing"
+   - Identifier: `group.lb.pokemon`
+   - Description: "Pokemon Data Sharing"
 
 2. Enable App Groups capability for both app identifiers:
-   - Main app: `lb.Pokemon-as-Files`
-   - Extension: `lb.Pokemon-as-Files.PokemonFileProviderExtension`
+   - Main app: `lb.Pokemon`
+   - Extension: `lb.Pokemon.PokemonFileProviderExtension`
 
 ### 4. Build the Project
 
 ```bash
 # Clean build folder
-xcodebuild clean -project "Pokémon as Files.xcodeproj"
+xcodebuild clean -project "Pokemon.xcodeproj"
 
 # Build both targets
-xcodebuild -project "Pokémon as Files.xcodeproj" -scheme "Pokémon as Files" -configuration Debug build
+xcodebuild -project "Pokemon.xcodeproj" -scheme "Pokemon" -configuration Debug build
 ```
 
 ### 5. Code Signing & Notarization (Optional)
@@ -139,10 +139,10 @@ For distribution outside of development:
 
 ```bash
 # Sign the app
-codesign --deep --force --verify --verbose --sign "Developer ID Application: Your Name" "Pokémon as Files.app"
+codesign --deep --force --verify --verbose --sign "Developer ID Application: Your Name" "Pokemon.app"
 
 # Notarize (requires Apple Developer Program)
-xcrun notarytool submit "Pokémon as Files.app" --keychain-profile "YourProfile" --wait
+xcrun notarytool submit "Pokemon.app" --keychain-profile "YourProfile" --wait
 ```
 
 ## Installation & Testing
@@ -150,7 +150,7 @@ xcrun notarytool submit "Pokémon as Files.app" --keychain-profile "YourProfile"
 ### 1. Install the App
 
 1. Build the project in Xcode
-2. Locate `Pokémon as Files.app` in the build output
+2. Locate `Pokemon.app` in the build output
 3. Copy to `/Applications` folder
 4. Launch the app
 
@@ -163,7 +163,7 @@ The File Provider Extension must be registered with the system:
 pluginkit -m -p com.apple.FileProvider -A
 
 # If not loaded, enable it
-pluginkit -e use -i lb.Pokemon-as-Files.PokemonFileProviderExtension
+pluginkit -e use -i lb.Pokemon.PokemonFileProviderExtension
 ```
 
 ### 3. Connect the Domain
@@ -171,14 +171,14 @@ pluginkit -e use -i lb.Pokemon-as-Files.PokemonFileProviderExtension
 1. Look for the 🔴 icon in your menu bar
 2. Click it and select **"Connect Domain"**
 3. The icon should turn 🟢 when connected
-4. Open Finder - you should see "Pokémon Drive" in the sidebar
+4. Open Finder - you should see "Pokemon Drive" in the sidebar
 
 ### 4. Verify Functionality
 
-1. **Domain appears in Finder**: Look for "Pokémon Drive" in sidebar
-2. **Folder structure**: Navigate to Pokémon Drive > Pokémon folder
-3. **Files listed**: Should see ~151 `.txt` files named after Pokémon
-4. **File content**: Open any file to see basic Pokémon data
+1. **Domain appears in Finder**: Look for "Pokemon Drive" in sidebar
+2. **Folder structure**: Navigate to Pokemon Drive > Pokemon folder
+3. **Files listed**: Should see ~151 `.txt` files named after Pokemon
+4. **File content**: Open any file to see basic Pokemon data
 5. **Refresh works**: Use menu bar "Refresh" to update data
 
 ## Troubleshooting
@@ -200,7 +200,7 @@ pluginkit -m -v -p com.apple.FileProvider
 
 **Error -2001** (NSFileProviderErrorDomain):
 - Extension not properly registered
-- Try: `pluginkit -r /path/to/Pokémon\ as\ Files.app`
+- Try: `pluginkit -r /path/to/Pokemon\ as\ Files.app`
 
 **Error -2014** (NSFileProviderErrorDomain):
 - Domain already exists
@@ -222,7 +222,7 @@ pluginkit -m -v -p com.apple.FileProvider
 
 ```bash
 # View system logs for File Provider
-log stream --predicate 'subsystem == "lb.pokemon-as-files"' --level debug
+log stream --predicate 'subsystem == "lb.pokemon"' --level debug
 
 # Check domain status
 systemextensionsctl list
@@ -231,7 +231,7 @@ systemextensionsctl list
 pluginkit -m -p com.apple.FileProvider -A
 
 # Reset domain (if needed)
-pluginkit -r /Applications/Pokémon\ as\ Files.app
+pluginkit -r /Applications/Pokemon\ as\ Files.app
 ```
 
 ### Development Debugging
@@ -241,13 +241,13 @@ Add logging to track issues:
 ```swift
 import os.log
 
-private let logger = Logger(subsystem: "lb.pokemon-as-files", category: "Debug")
+private let logger = Logger(subsystem: "lb.pokemon", category: "Debug")
 logger.log("Debug message here")
 ```
 
 View logs in Console.app or Terminal:
 ```bash
-log show --predicate 'subsystem == "lb.pokemon-as-files"' --last 1h
+log show --predicate 'subsystem == "lb.pokemon"' --last 1h
 ```
 
 ## API Reference
@@ -263,22 +263,22 @@ The app uses the following PokeAPI endpoint:
 
 - **Domain ID**: `pokemon`
 - **Root Container**: `NSFileProviderItemIdentifier.rootContainer`
-- **Pokémon Folder**: `pokemon_folder`
-- **Pokémon Files**: `pokemon_{id}` (e.g., `pokemon_1` for Bulbasaur)
+- **Pokemon Folder**: `pokemon_folder`
+- **Pokemon Files**: `pokemon_{id}` (e.g., `pokemon_1` for Bulbasaur)
 
 ## Known Limitations
 
 1. **Read-Only**: Files are virtual and read-only
-2. **Basic Content**: Files contain minimal Pokémon data
-3. **No Pagination**: Limited to first 151 Pokémon
+2. **Basic Content**: Files contain minimal Pokemon data
+3. **No Pagination**: Limited to first 151 Pokemon
 4. **No Offline Images**: Text files only, no images
 5. **System Dependencies**: Requires macOS File Provider system to be functioning
 
 ## Future Enhancements
 
-- [ ] Implement file content fetching from individual Pokémon endpoints
-- [ ] Add pagination support for all Pokémon
-- [ ] Include Pokémon sprites/images
+- [ ] Implement file content fetching from individual Pokemon endpoints
+- [ ] Add pagination support for all Pokemon
+- [ ] Include Pokemon sprites/images
 - [ ] Implement alphabetical subfolders (A-Z organization)
 - [ ] Add search/filter capabilities
 - [ ] Support for additional data (types, stats, etc.)
@@ -286,7 +286,7 @@ The app uses the following PokeAPI endpoint:
 
 ## License
 
-This project is created for educational and demonstration purposes. Pokémon data is provided by [PokeAPI](https://pokeapi.co/).
+This project is created for educational and demonstration purposes. Pokemon data is provided by [PokeAPI](https://pokeapi.co/).
 
 ## Support
 

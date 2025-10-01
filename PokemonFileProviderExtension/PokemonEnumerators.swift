@@ -19,16 +19,24 @@ class PokemonRootEnumerator: NSObject, NSFileProviderEnumerator {
     }
 
     func enumerateItems(for observer: NSFileProviderEnumerationObserver, startingAt page: NSFileProviderPage) {
-        logger.log("Enumerating root items")
-
         let items: [NSFileProviderItem] = [PokemonFolderItem()]
-
         observer.didEnumerate(items)
         observer.finishEnumerating(upTo: nil)
     }
 
-    func invalidate() {
-        logger.log("Root enumerator invalidated")
+    func invalidate() {}
+
+    func enumerateChanges(for observer: NSFileProviderChangeObserver, from syncAnchor: NSFileProviderSyncAnchor) {
+        let items: [NSFileProviderItem] = [PokemonFolderItem()]
+        observer.didUpdate(items)
+
+        let currentAnchor = NSFileProviderSyncAnchor(Date().description.data(using: .utf8)!)
+        observer.finishEnumeratingChanges(upTo: currentAnchor, moreComing: false)
+    }
+
+    func currentSyncAnchor(completionHandler: @escaping (NSFileProviderSyncAnchor?) -> Void) {
+        let anchor = NSFileProviderSyncAnchor(Date().data(using: .utf8)!)
+        completionHandler(anchor)
     }
 }
 
@@ -43,38 +51,56 @@ class PokemonFolderEnumerator: NSObject, NSFileProviderEnumerator {
     }
 
     func enumerateItems(for observer: NSFileProviderEnumerationObserver, startingAt page: NSFileProviderPage) {
-        logger.log("Enumerating Pokemon folder items")
-
-        Task { @MainActor in
+        Task {
             do {
-                let pokemonService = PokeAPIService.shared
-                var pokemon = pokemonService.cachedPokemon
+                let pokemon = try await PokeAPIService.shared.fetchPokemonList(limit: 151)
 
-                // If no cached data, try to fetch fresh data
-                if pokemon.isEmpty {
-                    do {
-                        pokemon = try await pokemonService.fetchPokemonList()
-                    } catch {
-                        logger.error("Failed to fetch Pokemon: \(error.localizedDescription)")
-                        observer.finishEnumeratingWithError(error)
-                        return
-                    }
+                let items: [NSFileProviderItem] = pokemon.map { poke in
+                    let pokemonItem = PokemonItem(pokemon: poke)
+                    let fileItem = PokemonFileItem(pokemon: pokemonItem)
+                    return fileItem
                 }
 
-                let items: [NSFileProviderItem] = pokemon.map { pokemon in
-                    PokemonFileItem(pokemon: PokemonItem(pokemon: pokemon))
-                }
-
-                logger.log("Enumerated \(items.count) Pokemon items")
                 observer.didEnumerate(items)
                 observer.finishEnumerating(upTo: nil)
 
+            } catch {
+                logger.error("Failed to fetch Pokemon: \(error.localizedDescription)")
+                observer.didEnumerate([])
+                observer.finishEnumerating(upTo: nil)
             }
         }
     }
 
     func invalidate() {
-        logger.log("Pokemon folder enumerator invalidated")
+        // Enumerator invalidated
+    }
+
+    func enumerateChanges(for observer: NSFileProviderChangeObserver, from syncAnchor: NSFileProviderSyncAnchor) {
+        Task {
+            do {
+                let pokemon = try await PokeAPIService.shared.fetchPokemonList(limit: 151)
+
+                let items: [NSFileProviderItem] = pokemon.map { poke in
+                    let pokemonItem = PokemonItem(pokemon: poke)
+                    return PokemonFileItem(pokemon: pokemonItem)
+                }
+
+                observer.didUpdate(items)
+
+                let currentAnchor = NSFileProviderSyncAnchor(Date().description.data(using: .utf8)!)
+                observer.finishEnumeratingChanges(upTo: currentAnchor, moreComing: false)
+
+            } catch {
+                logger.error("Failed to fetch Pokemon: \(error.localizedDescription)")
+                observer.finishEnumeratingChanges(upTo: syncAnchor, moreComing: false)
+            }
+        }
+    }
+
+    func currentSyncAnchor(completionHandler: @escaping (NSFileProviderSyncAnchor?) -> Void) {
+        let anchor = NSFileProviderSyncAnchor(Date().description.data(using: .utf8)!)
+        completionHandler(anchor)
     }
 }
 
@@ -86,33 +112,38 @@ class PokemonWorkingSetEnumerator: NSObject, NSFileProviderEnumerator {
     init(logger: Logger) {
         self.logger = logger
         super.init()
-    }
+        logger.log("WORKING SET ENUMERATOR CREATED!")
 
-    func enumerateItems(for observer: NSFileProviderEnumerationObserver, startingAt page: NSFileProviderPage) {
-        logger.log("Enumerating working set")
-
-        Task { @MainActor in
-            let pokemonService = PokeAPIService.shared
-            let pokemon = pokemonService.cachedPokemon
-
-            var items: [NSFileProviderItem] = [
-                PokemonRootItem(),
-                PokemonFolderItem()
-            ]
-
-            let pokemonItems: [NSFileProviderItem] = pokemon.map { pokemon in
-                PokemonFileItem(pokemon: PokemonItem(pokemon: pokemon))
-            }
-
-            items.append(contentsOf: pokemonItems)
-
-            logger.log("Working set enumerated \(items.count) total items")
-            observer.didEnumerate(items)
-            observer.finishEnumerating(upTo: nil)
+        // Try to trigger enumeration immediately
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            self.logger.log("WORKING SET: Checking if enumeration is needed...")
         }
     }
 
-    func invalidate() {
-        logger.log("Working set enumerator invalidated")
+    func enumerateItems(for observer: NSFileProviderEnumerationObserver, startingAt page: NSFileProviderPage) {
+        let items: [NSFileProviderItem] = [PokemonFolderItem()]
+        observer.didEnumerate(items)
+        observer.finishEnumerating(upTo: nil)
+    }
+
+    func invalidate() {}
+
+    func enumerateChanges(for observer: NSFileProviderChangeObserver, from syncAnchor: NSFileProviderSyncAnchor) {
+        let items: [NSFileProviderItem] = [PokemonFolderItem()]
+        observer.didUpdate(items)
+
+        let currentAnchor = NSFileProviderSyncAnchor(Date().description.data(using: .utf8)!)
+        observer.finishEnumeratingChanges(upTo: currentAnchor, moreComing: false)
+    }
+
+    func currentSyncAnchor(completionHandler: @escaping (NSFileProviderSyncAnchor?) -> Void) {
+        let anchor = NSFileProviderSyncAnchor(Date().data(using: .utf8)!)
+        completionHandler(anchor)
+    }
+}
+
+extension Date {
+    func data(using encoding: String.Encoding) -> Data? {
+        return self.description.data(using: encoding)
     }
 }

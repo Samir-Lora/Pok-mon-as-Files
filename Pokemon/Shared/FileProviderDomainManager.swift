@@ -1,6 +1,6 @@
 //
 //  FileProviderDomainManager.swift
-//  Pokémon as Files
+//  Pokemon
 //
 //  Created by Samir Lora on 30/09/25.
 //
@@ -10,11 +10,10 @@ import FileProvider
 import Combine
 import os.log
 
-@MainActor
 class FileProviderDomainManager: ObservableObject {
     static let shared = FileProviderDomainManager()
 
-    private let logger = Logger(subsystem: "lb.pokemon-as-files", category: "DomainManager")
+    private let logger = Logger(subsystem: "lb.pokemon", category: "DomainManager")
     private let domainIdentifier = NSFileProviderDomainIdentifier(rawValue: "pokemon")
 
     @Published var isConnected = false
@@ -28,60 +27,58 @@ class FileProviderDomainManager: ObservableObject {
     // MARK: - Public Methods
 
     func connectDomain() async throws {
-        logger.log("Attempting to connect Pokemon domain")
-
         let domain = NSFileProviderDomain(
             identifier: domainIdentifier,
-            displayName: "Pokémon Drive"
+            displayName: "Pokemon Drive"
         )
 
         do {
             try await NSFileProviderManager.add(domain)
             isConnected = true
-            logger.log("Successfully connected Pokemon domain")
         } catch {
             self.error = error
-            logger.error("Failed to connect domain: \(error.localizedDescription)")
             throw error
         }
     }
 
     func disconnectDomain() async throws {
-        logger.log("Attempting to disconnect Pokemon domain")
-
         let domain = NSFileProviderDomain(
             identifier: domainIdentifier,
-            displayName: "Pokémon Drive"
+            displayName: "Pokemon Drive"
         )
 
         do {
             try await NSFileProviderManager.remove(domain)
             isConnected = false
-            logger.log("Successfully disconnected Pokemon domain")
         } catch {
             self.error = error
-            logger.error("Failed to disconnect domain: \(error.localizedDescription)")
             throw error
         }
     }
 
     func refreshDomain() async throws {
-        logger.log("Refreshing Pokemon domain")
-
         guard isConnected else {
-            logger.warning("Domain not connected, cannot refresh")
-            return
+            throw NSError(domain: "FileProviderDomainManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Domain not connected"])
         }
 
-        // For refresh, we'll rely on the extension to handle updates
-        // rather than trying to signal specific enumerators
-        logger.log("Domain refresh requested")
+        let domain = NSFileProviderDomain(
+            identifier: domainIdentifier,
+            displayName: "Pokemon Drive"
+        )
+
+        guard let manager = NSFileProviderManager(for: domain) else {
+            throw NSError(domain: "FileProviderDomainManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to get file provider manager"])
+        }
+
+        try await manager.signalEnumerator(for: NSFileProviderItemIdentifier.rootContainer)
+
+        let pokemonFolderIdentifier = NSFileProviderItemIdentifier("pokemon_folder")
+        try await manager.signalEnumerator(for: pokemonFolderIdentifier)
     }
 
     // MARK: - Helper Methods
 
     func updateConnectionStatus(_ connected: Bool) {
         isConnected = connected
-        logger.log("Connection status updated: \(connected)")
     }
 }

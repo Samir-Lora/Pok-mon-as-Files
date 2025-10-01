@@ -6,16 +6,11 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.lb.pokemon-as-files</string>
+		<string>group.lb.pokemon</string>
 	</array>
-	<key>com.apple.security.network.client</key>
-	<true/>
 	<key>com.apple.security.files.user-selected.read-only</key>
 	<true/>
-	<key>com.apple.security.temporary-exception.mach-lookup.global-name</key>
-	<array>
-		<string>com.apple.FileProvider</string>
-		<string>com.apple.fileprovider.nonui</string>
-	</array>
+	<key>com.apple.security.network.client</key>
+	<true/>
 </dict>
 </plist>
